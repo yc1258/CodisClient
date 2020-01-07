@@ -1,6 +1,5 @@
 #include "RoundRobinCodisPool.h"
 #include "Log.h"
-#include "json/json.h"
 #include "ScopedLock.h"
 
 using namespace bfd::codis;
