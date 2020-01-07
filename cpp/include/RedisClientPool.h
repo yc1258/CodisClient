@@ -13,7 +13,7 @@
 #include <cstdlib>
 #include <string>
 #include "hiredis.h"
-#include "hiredis_ae.h"
+#include "adapters/ae.h"
 #include "ae.h"
 #include "async.h"
 #include "Utils.h"
