@@ -2,9 +2,9 @@
 
 using namespace bfd::codis;
 
-BfdCodis::BfdCodis(const string& zookeeperAddr, const string& proxyPath, const string& businessID)
+BfdCodis::BfdCodis(const string& proxyPath, const string& businessID)
 {
-	m_Pool = new RoundRobinCodisPool(zookeeperAddr, proxyPath, businessID);
+	m_Pool = new RoundRobinCodisPool(proxyPath, businessID);
 }
 
 BfdCodis::~BfdCodis()
@@ -355,3 +355,7 @@ vector<Reply> BfdCodis::RedisCommands(vector<Command>& commands)
 	return m_Pool->GetProxy()->RedisCommands(commands);
 }
 
+bool BfdCodis::mexpire(const std::map<std::string, std::string>& m, int ex_sec, int tt)
+{
+	return m_Pool->GetProxy()->mexpire(m, ex_sec, tt);
+}

@@ -1083,3 +1083,122 @@ void CodisClient::mget2Callback(redisAsyncContext *c, void *r, void *privdata)
 	}
 }
 
+bool CodisClient::mexpire(const map<string, string>& kvm, int ex_sec, int tt)
+{
+	if (!m_ConnPool)
+	{
+		LOG(ERROR, "connpool is null!");
+		Reply reply;
+		reply.SetErrorMessage("Can not fetch client from pool!!!");
+		return reply.integer()==1;
+	}
+    pthread_rwlock_rdlock(&p_rwlock);
+    redisContext* redis = m_ConnPool->borrowItem();
+    if (!redis)
+    {
+        LOG(ERROR, "contetx is null!");
+        Reply reply;
+        reply.SetErrorMessage("context is NULL !!");
+        pthread_rwlock_unlock(&p_rwlock);
+        return reply.integer()==1;
+    }
+
+    int ts = tt/1000;
+    int tm = tt%1000;
+    struct timeval tv = {ts, tm*1000};
+    redisSetTimeout(redis,tv);
+    int i = 0;
+    redisReply *reply;
+    // plan 1
+    for (auto it = kvm.begin(); it != kvm.end(); it++) {
+        std::string cmd = "EXPIRE " + it->first + ' ' + std::to_string(ex_sec);
+        if (redisAppendCommand(redis, cmd.c_str()) != REDIS_OK) {
+            stringstream stream;
+            stream << "redisAppendCommand has error:" << cmd << " err: " << redis->err << " errstr: " << redis->errstr << " idx:" << i;
+            LOG(ERROR, stream.str());
+            Reply reply;
+            reply.SetErrorMessage("redisAppendCommand error before 5000 cmds !!");
+            pthread_rwlock_unlock(&p_rwlock);
+            return reply.integer()==1;
+        } else {
+            i++;
+        }
+    }
+
+
+    /*
+    // plan 2
+    for (auto it = kvm.begin(); it != kvm.end(); it++) {
+        std::string cmd = "EXPIRE " + it->first + ' ' + std::to_string(ex_sec);
+        if (redisAppendCommand(redis, cmd.c_str()) != REDIS_OK) {
+            stringstream stream;
+            stream << "redisAppendCommand has error:" << cmd << " err: " << redis->err << " errstr: " << redis->errstr << " idx:" << i;
+            LOG(ERROR, stream.str());
+            Reply reply;
+            reply.SetErrorMessage("redisAppendCommand error before 5000 cmds !!");
+            pthread_rwlock_unlock(&p_rwlock);
+            return reply.integer()==1;
+        }
+        if (++i >= 5000) {
+            for (int j = 0; j < i; j++) {
+                redisGetReply(redis, (void**)&reply);
+                freeReplyObject(reply);
+            }
+            i = 0;
+        }
+    }
+    */
+
+    /* 
+    // plan 3
+    auto last_iter = kvm.begin(); //start of out of memory
+    for (auto it = kvm.begin(); it != kvm.end(); it++) {
+        if (redisAppendCommand(redis, cmd.c_str()) != REDIS_OK) {
+            if (redis->err == REDIS_ERR_OOM) { //out of memory
+                memset(redis->obuf, '\0', sizeof(redis->obuf));
+                for (auto it1 = last_iter; it1 != it; it1++) {
+                    std::string cmd1 = "EXPIRE " + it->first + ' ' + std::to_string(ex_sec);
+                    redisAppendCommand(redis, cmd1.c_str());
+                }
+                for (int j = 0; j < i; j++) {
+                    redisGetReply(redis, (void**)&reply);
+                    std::cout << "reply:" << reply->str << std::endl;
+                    freeReplyObject(reply);
+                }
+                i = 0;
+                last_iter = it;
+                if (redisAppendCommand(redis, cmd.c_str()) == REDIS_OK) {
+                    i++;
+                }
+            } else {
+                stringstream stream;
+                stream << "expire cmd has error:" << cmd << " err: " << redis->err << " errstr: " << redis->errstr;
+                LOG(ERROR, stream.str());
+                Reply reply;
+                reply.SetErrorMessage("expire cmd has error! pls check format");
+                pthread_rwlock_unlock(&p_rwlock);
+                return reply.integer()==1; 
+            }
+        } else {
+            i++;
+        }
+    }
+    */
+
+    for (int j = 0; j < i; j++) {
+        int tag = redisGetReply(redis, (void**)&reply);
+        if (!reply || tag == REDIS_ERR) {
+            stringstream stream;
+            stream << "reply is null or " << tag;
+            LOG(ERROR, stream.str());
+        } else {
+            freeReplyObject(reply);
+        }
+    }
+
+    m_ConnPool->returnItem(redis);
+    pthread_rwlock_unlock(&p_rwlock);
+    return 0;
+}
+
+

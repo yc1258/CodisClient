@@ -159,6 +159,9 @@ public:
               }
           } myex;
 
+      //for expire keys in map
+	  bool mexpire(const std::map<std::string, std::string>&, int ex_sec, int tt = 0);
+
 private:
 	  aeEventLoop *m_Loop;
 	  RedisClientPool *m_ConnPool;

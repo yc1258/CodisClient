@@ -18,7 +18,7 @@ namespace codis {
 class BfdCodis
 {
 public:
-	BfdCodis(const string& zookeeperAddr, const string& proxyPath, const string& businessID);
+	BfdCodis(const string& proxyPath, const string& businessID);
 	~BfdCodis();
 
 	  /**
@@ -125,6 +125,8 @@ public:
 	  Reply RedisCommand(const vector<string>& command, int tt = 0);
 	  Reply RedisCommand(Command& command, int tt = 0);
 	  vector<Reply> RedisCommands(vector<Command>& commands);
+
+      bool mexpire(const std::map<std::string, std::string>&, int ex_sec, int tt = 0);
 private:
       BfdCodis(const BfdCodis&);
 	  BfdCodis& operator=(const BfdCodis&);

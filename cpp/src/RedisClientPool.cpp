@@ -53,10 +53,10 @@ redisContext* RedisClientPool::borrowItem()
 		if (rt == NULL)
 		{
 			rt = create();
-			if (rt != NULL)
-	        	{
-				used_++;
-	 	      	}
+            if (rt != NULL)
+            {
+                used_++;
+            }
 		}
 	}
 	return rt;
